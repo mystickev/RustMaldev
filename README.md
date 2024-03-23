@@ -14,7 +14,7 @@ Rust and Cargo (latest stable version recommended).
 Clone the repository and build the desired tools using Cargo:
 
 ```
-git clone https://github.com/yourusername/RustMaldev.git
+git clone https://github.com/mystickev/RustMaldev.git
 cd RustMaldev/<Tool>
 cargo build --release
 

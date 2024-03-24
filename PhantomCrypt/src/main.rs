@@ -2,6 +2,7 @@ use aes::{Aes128, cipher::{KeyInit, generic_array::GenericArray}};
 use std::fs::File;
 use std::io::{self, Read};
 use aes::cipher::BlockEncrypt;
+use std::io::Write;
 
 struct Rc4Encrypt {
     i: u8,
@@ -68,7 +69,7 @@ fn xor_encrypt(shellcode: &mut [u8], key: &[u8]) {
 }
 
 //function to turn shellcode to mac addresses
-fn print_shellcode_as_mac(shellcode: &[u8]) {
+fn shellcode_as_mac(shellcode: &[u8]) {
     for chunk in shellcode.chunks(6) {
         let mac: Vec<String> = chunk.iter().map(|byte| format!("{:02X}", byte)).collect();
         println!("{}", mac.join(":"));
@@ -76,12 +77,19 @@ fn print_shellcode_as_mac(shellcode: &[u8]) {
 }
 
 //function to turn shellcode to ipv4
-fn print_shellcode_as_ipv4(shellcode: &[u8]) {
+fn shellcode_as_ipv4(shellcode: &[u8]) {
     for chunk in shellcode.chunks(4) {
         let segment: Vec<String> = chunk.iter().map(|byte| byte.to_string()).collect();
         println!("{}.{}.{}.{}", segment.get(0).unwrap_or(&"0".to_string()), segment.get(1).unwrap_or(&"0".to_string()), segment.get(2).unwrap_or(&"0".to_string()), segment.get(3).unwrap_or(&"0".to_string()));
     }
 }
+
+fn WriteToFile(filename: &str, data: &[u8]) -> io::Result<()> {
+    let mut file = File::create(filename)?;
+    file.write_all(data)?;
+    Ok(())
+}
+
 
 fn main() -> io::Result<()> {
     let mut input = String::new();
@@ -106,7 +114,12 @@ fn main() -> io::Result<()> {
             let key = input.trim().as_bytes();
             let mut rc4 = Rc4Encrypt::new(key);
             rc4.encrypt(&mut shellcode);
-            println!("RC4 Encrypted shellcode: {:?}", shellcode);
+            let output_file = "rc4_encrypted_shellcode.bin";
+            match WriteToFile(output_file, &shellcode) {
+                Ok(_) => println!("RC4'd shellcode written to {}", output_file),
+                Err(e) => println!("Failed to write to file: {}", e),
+            }
+
         },
         "XOR" => {
             println!("Enter XOR Key:");
@@ -114,7 +127,12 @@ fn main() -> io::Result<()> {
             io::stdin().read_line(&mut input)?;
             let key = input.trim().as_bytes();
             xor_encrypt(&mut shellcode, key);
-            println!("XOR Encrypted shellcode: {:?}", shellcode);
+            let output_file = "xored_shellcode.bin";
+            match WriteToFile(output_file, &shellcode) {
+                Ok(_) => println!("XORed shellcode written to {}", output_file),
+                Err(e) => println!("Failed to write to file: {}", e),
+            }
+
         },
         "AES" => {
             println!("Enter AES Key (16 bytes):");
@@ -129,15 +147,19 @@ fn main() -> io::Result<()> {
             let cipher = Aes128::new(&key); // Assuming KeyInit trait is in use
             pad_data(&mut shellcode);
             let encrypted_data = aes_encrypt(&shellcode, &cipher);
-            println!("AES Encrypted shellcode: {:?}", encrypted_data);
+            let output_file = "AES_shellcode.bin";
+            match WriteToFile(output_file, &encrypted_data) {
+                Ok(_) => println!("AES encrypted shellcode written to {}", output_file),
+                Err(e) => println!("Failed to write to file: {}", e),
+            }
         },
         "IPV4" => {
             println!("Shellcode as IPv4 addresses:");
-            print_shellcode_as_ipv4(&shellcode);
+            shellcode_as_ipv4(&shellcode);
         },
         "MAC" => {
             println!("Shellcode as MAC addresses:");
-            print_shellcode_as_mac(&shellcode);
+            shellcode_as_mac(&shellcode);
         },
         _ => {
             println!("Invalid encryption/obfuscation type selected.");
